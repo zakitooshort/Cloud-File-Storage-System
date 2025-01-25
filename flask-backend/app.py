@@ -1,86 +1,110 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS  # Enable CORS for cross-origin requests
+from flask import Flask, request,jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 import cloudinary
 import cloudinary.uploader
 from dotenv import load_dotenv
 import os
 import logging
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configure Cloudinary
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
     api_key=os.getenv('CLOUDINARY_API_KEY'),
     api_secret=os.getenv('CLOUDINARY_API_SECRET')
 )
 
-# Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# In-memory storage for uploaded file metadata
-uploaded_files = []
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+class File(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(100), nullable=False)
+    url = db.Column(db.String(200), nullable=False)
+    public_id = db.Column(db.String(100), nullable=False)
+    format = db.Column(db.String(10), nullable=False)
+    bytes = db.Column(db.Integer, nullable=False)
+
+with app.app_context():
+    db.create_all()
+
+
+@app.route('/files', methods=['GET'])
+def get_files():
+    files = File.query.all()
+    file_list = [{
+        'filename':file.filename,
+        'url':file.url,
+        'public_id':file.public_id,
+        'format':file.format,
+        'bytes':file.bytes
+    } for file in files]
+    return jsonify({'files':file_list}),200
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """
-    Handle file uploads to Cloudinary.
-    """
-    # Check if a file is included in the request
     if 'file' not in request.files:
-        logger.error('No file uploaded')
         return jsonify({'error': 'No file uploaded'}), 400
 
     file = request.files['file']
 
-    # Check if the file is empty
     if file.filename == '':
-        logger.error('Empty file uploaded')
         return jsonify({'error': 'Empty file uploaded'}), 400
 
     try:
-        # Upload the file to Cloudinary
-        logger.info(f'Uploading file: {file.filename}')
         upload_result = cloudinary.uploader.upload(file, resource_type='auto')
-        logger.info('File uploaded successfully')
+        logger.info('File uploaded to Cloudinary: %s', upload_result)
 
-        # Store file metadata
-        file_metadata = {
-            'filename': file.filename,
-            'url': upload_result['secure_url'],
-            'public_id': upload_result['public_id'],
-            'format': upload_result['format'],
-            'bytes': upload_result['bytes']
-        }
-        uploaded_files.append(file_metadata)
+        new_file = File(
+            filename=file.filename,
+            url=upload_result['secure_url'],
+            public_id=upload_result['public_id'],
+            format=upload_result['format'],
+            bytes=upload_result['bytes']
+        )
+        db.session.add(new_file)
+        db.session.commit()
 
-        return jsonify({'message': 'File uploaded successfully', 'file': file_metadata}), 200
+        return jsonify({'message': 'File uploaded successfully', 'file': {
+            'filename': new_file.filename,
+            'url': new_file.url,
+            'public_id': new_file.public_id,
+            'format': new_file.format,
+            'bytes': new_file.bytes
+        }}), 200
     except Exception as e:
-        # Log the error and return a 500 response
-        logger.error(f'Error uploading file: {str(e)}')
+        logger.error('Error uploading file: %s', str(e))
         return jsonify({'error': str(e)}), 500
+    
 
-@app.route('/files', methods=['GET'])
-def get_files():
-    """
-    Return the list of uploaded files.
-    """
-    return jsonify({'files': uploaded_files}), 200
+@app.route('/delete/<name>', methods=['DELETE'])
+def delete_file(name):
+    try:
+        file_to_delete = File.query.filter_by(public_id=name).first()
+        if file_to_delete is None:
+            return jsonify({'error': 'File not found'}), 404
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """
-    Health check endpoint to verify the server is running.
-    """
-    return jsonify({'status': 'ok'}), 200
+    
+        delete_result = cloudinary.uploader.destroy(name)
+        logger.info('Cloudinary delete result: %s',delete_result)  
 
+        if delete_result['result'] == 'ok':
+            db.session.delete(file_to_delete)
+            db.session.commit()
+            return jsonify({'message': 'File deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Failed to delete file from Cloudinary'}), 500
+    except Exception as e:
+        print(f"Error deleting file: {str(e)}")  
+        return jsonify({'error': str(e)}), 500
+    
 if __name__ == '__main__':
-    # Run the Flask app
-    logger.info('Starting Flask server...')
     app.run(debug=True)

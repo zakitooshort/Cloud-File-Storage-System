@@ -1,13 +1,13 @@
-import React from 'react';
-import FileUpload from './FileUpload';
+import FileUpload from './FIleUpload'
+import './App.css'
 
-const App: React.FC = () => {
-    return (
-        <div className="App">
-            <h1>Cloud File Storage</h1>
-            <FileUpload />
-        </div>
-    );
-};
+function App() {
 
-export default App;
+  return (
+    <>
+      <FileUpload />
+    </>
+  )
+}
+
+export default App
