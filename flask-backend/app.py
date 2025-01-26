@@ -32,6 +32,7 @@ class File(db.Model):
     public_id = db.Column(db.String(100), nullable=False)
     format = db.Column(db.String(10), nullable=False)
     bytes = db.Column(db.Integer, nullable=False)
+    caption = db.Column(db.String(200), nullable=True)
 
 with app.app_context():
     db.create_all()
@@ -45,7 +46,8 @@ def get_files():
         'url':file.url,
         'public_id':file.public_id,
         'format':file.format,
-        'bytes':file.bytes
+        'bytes':file.bytes,
+        'caption':file.caption
     } for file in files]
     return jsonify({'files':file_list}),200
 
@@ -58,6 +60,8 @@ def upload_file():
 
     if file.filename == '':
         return jsonify({'error': 'Empty file uploaded'}), 400
+    
+    caption = request.form.get('caption','')
 
     try:
         upload_result = cloudinary.uploader.upload(file, resource_type='auto')
@@ -68,7 +72,8 @@ def upload_file():
             url=upload_result['secure_url'],
             public_id=upload_result['public_id'],
             format=upload_result['format'],
-            bytes=upload_result['bytes']
+            bytes=upload_result['bytes'],
+            caption=caption
         )
         db.session.add(new_file)
         db.session.commit()
@@ -78,7 +83,8 @@ def upload_file():
             'url': new_file.url,
             'public_id': new_file.public_id,
             'format': new_file.format,
-            'bytes': new_file.bytes
+            'bytes': new_file.bytes,
+            'caption':new_file.caption,
         }}), 200
     except Exception as e:
         logger.error('Error uploading file: %s', str(e))

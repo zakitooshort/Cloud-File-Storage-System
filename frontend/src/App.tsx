@@ -1,13 +1,12 @@
-import FileUpload from './FIleUpload'
-import './App.css'
+import AppRouter from './router/router';
+import './App.css';
 
 function App() {
-
   return (
     <>
-      <FileUpload />
+      <AppRouter />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
