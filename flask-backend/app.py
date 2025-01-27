@@ -1,6 +1,8 @@
 from flask import Flask, request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 import cloudinary
 import cloudinary.uploader
 from dotenv import load_dotenv
@@ -21,9 +23,17 @@ cloudinary.config(
 app = Flask(__name__)
 CORS(app)
 
+app.config['JWT_SECRET_KEY']=os.getend('JWT_SECRET_KEY')
+jwt = JWTManager(app)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,13 +42,48 @@ class File(db.Model):
     public_id = db.Column(db.String(100), nullable=False)
     format = db.Column(db.String(10), nullable=False)
     bytes = db.Column(db.Integer, nullable=False)
-    caption = db.Column(db.String(200), nullable=True)
 
 with app.app_context():
     db.create_all()
 
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({"message":"User already exists"});400
+
+    hashed_password = generate_password_hash(password)
+    new_user = User(username=username, password=hashed_password)   
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message":"User registered successfully"}),201
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data=request.getjson()
+    username = data.get('username')
+    password = data.get('password')
+    
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        access_token =create_access_token(identity=username)
+        return jsonify({"access_token":access_token}),200
+    
+    return jsonify({"message":"invalid credentials"}),401
+
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify({"message":f"Hello , {current_user}!"}),200
 
 @app.route('/files', methods=['GET'])
+@jwt_required()
 def get_files():
     files = File.query.all()
     file_list = [{
@@ -47,11 +92,11 @@ def get_files():
         'public_id':file.public_id,
         'format':file.format,
         'bytes':file.bytes,
-        'caption':file.caption
     } for file in files]
     return jsonify({'files':file_list}),200
 
 @app.route('/upload', methods=['POST'])
+@jwt_required()
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -61,7 +106,6 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'Empty file uploaded'}), 400
     
-    caption = request.form.get('caption','')
 
     try:
         upload_result = cloudinary.uploader.upload(file, resource_type='auto')
@@ -73,7 +117,6 @@ def upload_file():
             public_id=upload_result['public_id'],
             format=upload_result['format'],
             bytes=upload_result['bytes'],
-            caption=caption
         )
         db.session.add(new_file)
         db.session.commit()
@@ -84,7 +127,6 @@ def upload_file():
             'public_id': new_file.public_id,
             'format': new_file.format,
             'bytes': new_file.bytes,
-            'caption':new_file.caption,
         }}), 200
     except Exception as e:
         logger.error('Error uploading file: %s', str(e))
@@ -92,6 +134,7 @@ def upload_file():
     
 
 @app.route('/delete/<name>', methods=['DELETE'])
+@jwt_required()
 def delete_file(name):
     try:
         file_to_delete = File.query.filter_by(public_id=name).first()

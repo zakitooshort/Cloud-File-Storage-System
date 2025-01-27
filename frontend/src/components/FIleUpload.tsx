@@ -9,7 +9,6 @@ const FileUpload: React.FC = () => {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
-    const [caption, setCaption] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
 
     // Fetch the list of uploaded files
@@ -22,7 +21,6 @@ const FileUpload: React.FC = () => {
             console.error('Error fetching files:', err);
         }
     };
-
     // Fetch files on component mount
     useEffect(() => {
         fetchFiles();
@@ -54,10 +52,9 @@ const FileUpload: React.FC = () => {
         setLoading(true); 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('caption', caption); // Include the caption in the upload
 
-        setError(null); // Clear any previous errors
-        setMessage(null); // Clear any previous messages
+        setError(null); 
+        setMessage(null); 
 
         try {
             const response = await fetch('http://localhost:5000/upload', {
@@ -65,25 +62,22 @@ const FileUpload: React.FC = () => {
                 body: formData,
             });
             const data = await response.json();
-            setMessage(data.message); // Show success message
-            fetchFiles(); // Refresh the file list
-            setFile(null); // Clear the selected file
-            setPreview(null); // Clear the preview
-            setCaption(''); // Clear the caption
+            setMessage(data.message); 
+            fetchFiles(); 
+            setFile(null); 
+            setPreview(null); 
         } catch (err) {
             console.error('Error uploading file:', err);
             setError('Failed to upload file. Please try again.');
         } finally {
-            setLoading(false); // Stop loading
+            setLoading(false);
         }
     };
 
-    // Handle file deletion
     const handleDelete = async (name: string) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this file?');
         if (!confirmDelete) return;
         try {
-            setLoading(true);
             const response = await fetch(`http://localhost:5000/delete/${name}`, {
                 method: 'DELETE',
             });
@@ -98,9 +92,7 @@ const FileUpload: React.FC = () => {
         } catch (err) {
             console.error('Error deleting file:', err);
             setError('Failed to delete file. Please try again.');
-        } finally {
-            setLoading(false); // Stop loading
-        }
+        } 
     };
 
     // Handle file download
@@ -125,10 +117,12 @@ const FileUpload: React.FC = () => {
     return (
         <>
             <nav>
-                <Link to="/">Home</Link>
+                <Link to="/" className='Link'>Home</Link>
             </nav>
-            <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
-                <h2>Upload an Image</h2>
+            <div style={{ maxWidth: '700px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
+                <div className='Uploads'>
+                <h2 className='title'>Upload an Image </h2>
+                <h2>(of something you've done today, ate ...etc)</h2>
                 <Dropzone onFileUpload={handleFileUpload} />
 
                 {/* Preview of the selected image */}
@@ -149,31 +143,15 @@ const FileUpload: React.FC = () => {
                             }}
                         />
 
-                        {/* Caption Input */}
-                        <div style={{ padding: '10px' }}>
-                            <input
-                                type="text"
-                                placeholder="Add a caption..."
-                                value={caption}
-                                onChange={(e) => setCaption(e.target.value)}
-                                style={{
-                                    width: '80%',
-                                    padding: '10px',
-                                    borderRadius: '5px',
-                                    border: '1px solid #ddd',
-                                    marginBottom: '10px',
-                                }}
-                            />
-                        </div>
                     </div>
                 )}
 
-                {/* Upload Button */}
                 <button
                     onClick={handleUpload}
                     disabled={loading}
                     style={{
                         marginTop: '20px',
+                        fontSize: '20px',
                         padding: '10px 20px',
                         backgroundColor: '#007bff',
                         color: 'white',
@@ -186,16 +164,14 @@ const FileUpload: React.FC = () => {
                     {loading && <Spinner />}
                 </button>
 
-                {/* Display messages and errors */}
                 {message && <div style={{ color: 'green', marginTop: '10px' }}>{message}</div>}
                 {error && <div style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
-
-                {/* Display uploaded files as Instagram-like posts */}
-                <h2>Your Previous Uploads</h2>
+                </div>
+                <h2 className='title'>Your Previous Uploads</h2>
                 {files.length === 0 ? (
                     <p>No files uploaded yet.</p>
                 ) : (
-                    <div>
+                    <div className='flex'>
                         {files.map((file, index) => (
                             <div
                                 key={index}
@@ -207,7 +183,6 @@ const FileUpload: React.FC = () => {
                                     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                                 }}
                             >
-                                {/* Image */}
                                 <img
                                     src={file.url}
                                     alt={file.filename}
@@ -217,19 +192,12 @@ const FileUpload: React.FC = () => {
                                     }}
                                 />
 
-                                {/* Caption (if available) */}
-                                <div style={{ padding: '10px', textAlign: 'left' }}>
-                                    <p style={{ margin: '0', fontSize: '14px', color: '#333' }}>
-                                        {file.caption || 'No caption'}
-                                    </p>
-                                </div>
-
-                                {/* Action Buttons (Delete and Download) */}
-                                <div style={{ padding: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                                <div style={{ backgroundColor:'#fff', padding: '10px', display: 'flex', justifyContent: 'space-between' }}>
                                     <button
                                         onClick={() => handleDelete(file.public_id)}
                                         style={{
-                                            padding: '5px 10px',
+                                            padding: '10px 20px',
+                                            fontSize: '20px',
                                             backgroundColor: '#ff4d4d',
                                             color: 'white',
                                             border: 'none',
@@ -242,7 +210,8 @@ const FileUpload: React.FC = () => {
                                     <button
                                         onClick={() => handleDownload(file.url, file.filename)}
                                         style={{
-                                            padding: '5px 10px',
+                                            padding: '10px 20px',
+                                            fontSize: '20px',
                                             backgroundColor: '#28a745',
                                             color: 'white',
                                             border: 'none',

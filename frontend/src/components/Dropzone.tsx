@@ -21,20 +21,20 @@ const Dropzone: React.FC<DropzoneProps> = ({ onFileUpload }) => {
     return (
         <div
             {...getRootProps()}
-            style={{
+            style={{height: 200,
                 border: '2px dashed #007bff',
-                borderRadius: '5px',
+                borderRadius: '25px',
                 padding: '20px',
                 textAlign: 'center',
-                backgroundColor: isDragActive ? '#f0f8ff' : 'white',
+                backgroundColor: isDragActive ? '#f0f8ff' : '#424e8a',
                 cursor: 'pointer',
             }}
         >
-            <input {...getInputProps()} />
+            <input {...getInputProps()}/>
             {isDragActive ? (
-                <p>Drop the file here...</p>
+                <p className='uploadP1'>Drop the file here...</p>
             ) : (
-                <p>Drag and drop a file here, or click to select a file</p>
+                <p className='uploadP2'>Drag and drop a file here, or click to select a file</p>
             )}
         </div>
     );
