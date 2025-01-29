@@ -23,7 +23,7 @@ cloudinary.config(
 app = Flask(__name__)
 CORS(app)
 
-app.config['JWT_SECRET_KEY']=os.getend('JWT_SECRET_KEY')
+app.config['JWT_SECRET_KEY']=os.getenv('JWT_SECRET_KEY')
 jwt = JWTManager(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
@@ -65,7 +65,7 @@ def register():
 
 @app.route('/login', methods=['POST'])
 def login():
-    data=request.getjson()
+    data=request.get_json()
     username = data.get('username')
     password = data.get('password')
     

@@ -4,6 +4,8 @@ const Home = () =>{
     return (
         <div>
            <h1 className="title">Shortyz</h1>
+           <h3><Link to="/register">Sign Up</Link></h3>
+           <h3><Link to="/login">Log In</Link></h3>
            <h2 className="title2">This project directly involves working with cloud storage services like AWS S3 or Google Cloud Storage although the cloud storage service used here was cloudinary
             it's mainly because i don't own an international credit card and cloudinary doesn't require owning ones</h2>
             <ol>

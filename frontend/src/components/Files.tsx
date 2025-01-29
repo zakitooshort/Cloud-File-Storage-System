@@ -13,27 +13,36 @@ const FileUpload: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const token = localStorage.getItem('token');
 
-    // Redirect to login if no token is found
-    if (!token) {
-        return <Navigate to="/login" />;
-    }
+         if (!token) {
+             return <Navigate to="/login" />;
+         }
 
     // Fetch the list of uploaded files
     const fetchFiles = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/files', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            setFiles(response.data.files);
+            const response = await fetch('http://localhost:5000/files');
+            const data = await response.json();
+            setFiles(data.files);
         } catch (err) {
             console.error('Error fetching files:', err);
-            setError('Failed to fetch files. Please try again.');
         }
     };
-
+    
     useEffect(() => {
+        const fetchFiles = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get('/files', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                setFiles(response.data.files);
+            } catch (err) {
+                console.error('Error fetching files:', err);
+            }
+        };
+
         fetchFiles();
     }, []);
 
@@ -60,24 +69,23 @@ const FileUpload: React.FC = () => {
             setError('Please select a file first!');
             return;
         }
-        setLoading(true);
+        setLoading(true); 
         const formData = new FormData();
         formData.append('file', file);
 
-        setError(null);
-        setMessage(null);
+        setError(null); 
+        setMessage(null); 
 
         try {
-            const response = await axios.post('http://localhost:5000/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
+            const response = await fetch('http://localhost:5000/upload', {
+                method: 'POST',
+                body: formData,
             });
-            setMessage(response.data.message);
-            fetchFiles(); // Refresh the file list
-            setFile(null);
-            setPreview(null);
+            const data = await response.json();
+            setMessage(data.message); 
+            fetchFiles(); 
+            setFile(null); 
+            setPreview(null); 
         } catch (err) {
             console.error('Error uploading file:', err);
             setError('Failed to upload file. Please try again.');
@@ -86,22 +94,25 @@ const FileUpload: React.FC = () => {
         }
     };
 
-    // Handle file deletion
     const handleDelete = async (name: string) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this file?');
         if (!confirmDelete) return;
         try {
-            const response = await axios.delete(`http://localhost:5000/delete/${name}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+            const response = await fetch(`http://localhost:5000/delete/${name}`, {
+                method: 'DELETE',
             });
-            setMessage(response.data.message);
-            setFiles((prevFiles) => prevFiles.filter((file) => file.public_id !== name));
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage(data.message);
+                setFiles((prevFiles) => prevFiles.filter((file) => file.public_id !== name));
+            } else {
+                setError(data.error || 'Failed to delete file.');
+            }
         } catch (err) {
             console.error('Error deleting file:', err);
             setError('Failed to delete file. Please try again.');
-        }
+        } 
     };
 
     // Handle file download
@@ -122,68 +133,64 @@ const FileUpload: React.FC = () => {
             setError('Failed to download file. Please try again.');
         }
     };
-
     return (
         <>
             <nav>
-                <Link to="/" className="Link">
-                    Home
-                </Link>
+                <Link to="/" className='Link'>Home</Link>
             </nav>
             <div style={{ maxWidth: '700px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
-                <div className="Uploads">
-                    <h2 className="title">Upload an Image</h2>
-                    <h2>(of something you've done today, ate ...etc)</h2>
-                    <Dropzone onFileUpload={handleFileUpload} />
+                <div className='Uploads'>
+                <h2 className='title'>Upload an Image </h2>
+                <h2>(of something you've done today, ate ...etc)</h2>
+                <Dropzone onFileUpload={handleFileUpload} />
 
-                    {/* Preview of the selected image */}
-                    {preview && (
-                        <div
+                {/* Preview of the selected image */}
+                {preview && (
+                    <div style={{
+                        marginTop: '20px',
+                        border: '1px solid #ddd',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    }}>
+                        <img
+                            src={preview}
+                            alt="Preview"
                             style={{
-                                marginTop: '20px',
-                                border: '1px solid #ddd',
-                                borderRadius: '10px',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                                width: '100%',
+                                display: 'block',
                             }}
-                        >
-                            <img
-                                src={preview}
-                                alt="Preview"
-                                style={{
-                                    width: '100%',
-                                    display: 'block',
-                                }}
-                            />
-                        </div>
-                    )}
+                        />
 
-                    <button
-                        onClick={handleUpload}
-                        disabled={loading}
-                        style={{
-                            marginTop: '20px',
-                            fontSize: '20px',
-                            padding: '10px 20px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                        }}
-                    >
-                        {loading ? 'Uploading...' : 'Upload'}
-                        {loading && <Spinner />}
-                    </button>
+                    </div>
+                )}
 
-                    {message && <div style={{ color: 'green', marginTop: '10px' }}>{message}</div>}
-                    {error && <div style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
+                <button
+                    onClick={handleUpload}
+                    disabled={loading}
+                    style={{
+                        marginTop: '20px',
+                        fontSize: '20px',
+                        padding: '10px 20px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                    }}
+                >
+                    {loading ? 'Uploading...' : 'Upload'}
+                    {loading && <Spinner />}
+                </button>
+
+                {message && <div style={{ color: 'green', marginTop: '10px' }}>{message}</div>}
+                {error && <div style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
                 </div>
-                <h2 className="title">Your Previous Uploads</h2>
+                <h2 className='title'>Your Previous Uploads</h2>
                 {files.length === 0 ? (
                     <p>No files uploaded yet.</p>
                 ) : (
-                    <div className="flex">
+                    <div className='flex'>
                         {files.map((file, index) => (
                             <div
                                 key={index}
@@ -204,14 +211,7 @@ const FileUpload: React.FC = () => {
                                     }}
                                 />
 
-                                <div
-                                    style={{
-                                        backgroundColor: '#fff',
-                                        padding: '10px',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                    }}
-                                >
+                                <div style={{ backgroundColor:'#fff', padding: '10px', display: 'flex', justifyContent: 'space-between' }}>
                                     <button
                                         onClick={() => handleDelete(file.public_id)}
                                         style={{
