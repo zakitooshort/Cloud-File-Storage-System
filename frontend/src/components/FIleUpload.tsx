@@ -13,12 +13,6 @@ const FileUpload: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const token = localStorage.getItem('token');
 
-    // Redirect to login if no token is found
-    if (!token) {
-        return <Navigate to="/login" />;
-    }
-
-    // Fetch the list of uploaded files
     const fetchFiles = async () => {
         try {
             const response = await axios.get('http://localhost:5000/files', {
@@ -165,7 +159,7 @@ const FileUpload: React.FC = () => {
                             marginTop: '20px',
                             fontSize: '20px',
                             padding: '10px 20px',
-                            backgroundColor: '#007bff',
+                            backgroundColor: '#2ba01e',
                             color: 'white',
                             border: 'none',
                             borderRadius: '5px',
@@ -176,7 +170,7 @@ const FileUpload: React.FC = () => {
                         {loading && <Spinner />}
                     </button>
 
-                    {message && <div style={{ color: 'green', marginTop: '10px' }}>{message}</div>}
+                    {message && <div style={{ color: '#E3ECCC', marginTop: '10px' }}>{message}</div>}
                     {error && <div style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
                 </div>
                 <h2 className="title">Your Previous Uploads</h2>
@@ -246,7 +240,7 @@ const FileUpload: React.FC = () => {
                     </div>
                 )}
             </div>
-        </>
+             </>
     );
 };
 

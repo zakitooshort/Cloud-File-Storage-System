@@ -34,8 +34,11 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
+    files = db.relationship('File', backref='user', lazy=True)  # Relationship
+
 
 class File(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100), nullable=False)
     url = db.Column(db.String(200), nullable=False)
@@ -85,19 +88,27 @@ def protected():
 @app.route('/files', methods=['GET'])
 @jwt_required()
 def get_files():
-    files = File.query.all()
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    files = File.query.filter_by(user_id=user.id).all()
     file_list = [{
-        'filename':file.filename,
-        'url':file.url,
-        'public_id':file.public_id,
-        'format':file.format,
-        'bytes':file.bytes,
+        'filename': file.filename,
+        'url': file.url,
+        'public_id': file.public_id,
+        'format': file.format,
+        'bytes': file.bytes,
     } for file in files]
-    return jsonify({'files':file_list}),200
+
+    return jsonify({'files': file_list}), 200
 
 @app.route('/upload', methods=['POST'])
 @jwt_required()
 def upload_file():
+    current_user = get_jwt_identity()
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -117,7 +128,8 @@ def upload_file():
             public_id=upload_result['public_id'],
             format=upload_result['format'],
             bytes=upload_result['bytes'],
-        )
+            user_id=User.query.filter_by(username=current_user).first().id 
+       )
         db.session.add(new_file)
         db.session.commit()
 
@@ -136,14 +148,19 @@ def upload_file():
 @app.route('/delete/<name>', methods=['DELETE'])
 @jwt_required()
 def delete_file(name):
-    try:
-        file_to_delete = File.query.filter_by(public_id=name).first()
-        if file_to_delete is None:
-            return jsonify({'error': 'File not found'}), 404
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
 
-    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    try:
+        file_to_delete = File.query.filter_by(public_id=name, user_id=user.id).first()
+        if file_to_delete is None:
+            return jsonify({'error': 'File not found or unauthorized'}), 404
+
         delete_result = cloudinary.uploader.destroy(name)
-        logger.info('Cloudinary delete result: %s',delete_result)  
+        logger.info('Cloudinary delete result: %s', delete_result)
 
         if delete_result['result'] == 'ok':
             db.session.delete(file_to_delete)
@@ -152,7 +169,7 @@ def delete_file(name):
         else:
             return jsonify({'error': 'Failed to delete file from Cloudinary'}), 500
     except Exception as e:
-        print(f"Error deleting file: {str(e)}")  
+        logger.error('Error deleting file: %s', str(e))
         return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':

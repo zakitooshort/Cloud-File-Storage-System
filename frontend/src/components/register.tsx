@@ -31,12 +31,17 @@ const RegisterForm: React.FC = () =>{
  };
  return (
    <div>
-   <h2>Register</h2>
+    <nav>
+        <Link to="/" className="Link">
+            Home
+        </Link>
+    </nav>
+   <h2 className='title'>Register</h2>
    {error && <p style={{ color: 'red' }}>{error}</p>}
-   <form onSubmit={handleSubmit}>
-       <div>
+   <form className="loginForm" onSubmit={handleSubmit}>
+       <div className='divBT'>
            <label htmlFor="username">Username:</label>
-           <input
+           <input className='inputBT'
                type="text"
                id="username"
                value={username}
@@ -44,9 +49,9 @@ const RegisterForm: React.FC = () =>{
                required
            />
        </div>
-       <div>
+       <div className='divBT'>
            <label htmlFor="password">Password:</label>
-           <input
+           <input className='inputBT'
                type="password"
                id="password"
                value={password}
@@ -54,9 +59,9 @@ const RegisterForm: React.FC = () =>{
                required
            />
        </div>
-       <button type="submit">Register</button>
+       <button className='submitBTN' type="submit">Register</button>
    </form>
-   <p>
+   <p className='pcenter'>
        Already have an account? <Link to="/login">Login here</Link>
    </p>
 </div>

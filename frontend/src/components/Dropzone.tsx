@@ -22,11 +22,11 @@ const Dropzone: React.FC<DropzoneProps> = ({ onFileUpload }) => {
         <div
             {...getRootProps()}
             style={{height: 200,
-                border: '2px dashed #007bff',
+                border: '2px dashed rgb(24, 243, 0)',
                 borderRadius: '25px',
                 padding: '20px',
                 textAlign: 'center',
-                backgroundColor: isDragActive ? '#f0f8ff' : '#424e8a',
+                backgroundColor: isDragActive ? '#074900' : '#2ba01e',
                 cursor: 'pointer',
             }}
         >
